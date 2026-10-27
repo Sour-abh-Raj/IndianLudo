@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../game/types.dart';
 import '../state/game_controller.dart';
+import 'theme.dart';
 
 /// Setup: players 2–10, houses/player, N sides, bot count, online toggle.
 class SetupScreen extends StatefulWidget {
@@ -41,23 +42,36 @@ class _SetupScreenState extends State<SetupScreen> {
               (v) => setState(() => choices.sides = v)),
           _stepper('Bots', choices.botCount, 0, choices.playerCount - 1,
               (v) => setState(() => choices.botCount = v)),
-          SwitchListTile(
-            key: const ValueKey('setupOnline'),
-            title: const Text('Online game'),
-            subtitle: const Text('Interface live; provider stub for now'),
-            value: choices.online,
-            onChanged: (v) => setState(() => choices.online = v),
+          Card(
+            child: SwitchListTile(
+              key: const ValueKey('setupOnline'),
+              title: const Text('Online game'),
+              subtitle:
+                  const Text('Interface live; provider stub for now'),
+              value: choices.online,
+              onChanged: (v) => setState(() => choices.online = v),
+            ),
           ),
-          SwitchListTile(
-            key: const ValueKey('setupReduced'),
-            title: const Text('Reduced motion'),
-            subtitle: const Text('Disables dice animation and token pulse'),
-            value: choices.reducedMotion,
-            onChanged: (v) => setState(() => choices.reducedMotion = v),
+          Card(
+            child: SwitchListTile(
+              key: const ValueKey('setupReduced'),
+              title: const Text('Reduced motion'),
+              subtitle:
+                  const Text('Disables dice animation and token pulse'),
+              value: choices.reducedMotion,
+              onChanged: (v) =>
+                  setState(() => choices.reducedMotion = v),
+            ),
           ),
           const SizedBox(height: 16),
           FilledButton(
             key: const ValueKey('setupStart'),
+            style: FilledButton.styleFrom(
+                backgroundColor: LudoColors.gold,
+                foregroundColor: LudoColors.ink,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                textStyle: const TextStyle(
+                    fontSize: 17, fontWeight: FontWeight.bold)),
             onPressed: () {
               final config = GameConfig(
                   playerCount: choices.playerCount, sides: choices.sides);
@@ -89,7 +103,9 @@ class _SetupScreenState extends State<SetupScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(label, style: Theme.of(context).textTheme.titleLarge),
+                Flexible(
+                  child: Text(label,
+                      style: Theme.of(context).textTheme.titleLarge)),
                 Row(
                   children: [
                     IconButton(

@@ -25,9 +25,21 @@ class ResultScreen extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Text('Player ${(state.winner ?? 0) + 1} wins!',
-                key: const ValueKey('winnerBanner'),
-                style: Theme.of(context).textTheme.displaySmall),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: LudoColors.gold,
+                borderRadius: BorderRadius.circular(12),
+                border:
+                    Border.all(color: LudoColors.woodDark, width: 2),
+              ),
+              child: Text('Player ${(state.winner ?? 0) + 1} wins!',
+                  key: const ValueKey('winnerBanner'),
+                  style:
+                      Theme.of(context).textTheme.displaySmall,
+                  textAlign: TextAlign.center),
+            ),
             const SizedBox(height: 16),
             Expanded(
               child: ListView(
@@ -60,11 +72,18 @@ class ResultScreen extends StatelessWidget {
               children: [
                 FilledButton(
                   key: const ValueKey('resultPlayAgain'),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: LudoColors.gold,
+                      foregroundColor: LudoColors.ink),
                   onPressed: () => Navigator.pushNamed(context, '/setup'),
                   child: const Text('Play Again'),
                 ),
                 OutlinedButton(
                   key: const ValueKey('resultHome'),
+                  style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side:
+                          const BorderSide(color: Colors.white54)),
                   onPressed: () =>
                       Navigator.popUntil(context, (r) => r.isFirst),
                   child: const Text('Home'),

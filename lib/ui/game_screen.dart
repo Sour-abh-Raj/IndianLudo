@@ -86,93 +86,150 @@ class _GameScreenState extends State<GameScreen>
                   content: Text(c.lastEvent!), duration: const Duration(seconds: 2)));
           });
         }
+        final canRoll = c.roll == null &&
+            !c.rolling &&
+            state.phase == Phase.playing &&
+            !c.isBot(state.turnPlayer);
+        // Minimal chrome: felt table, full-bleed turn banner, board,
+        // then one unmissable dice + action row.
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Indian Ludo'),
-            actions: [
-              Row(children: [
-                const Text('Calm', style: TextStyle(fontSize: 12)),
-                Switch(
-                  value: c.reducedMotion,
-                  onChanged: c.setReducedMotion,
+          backgroundColor: LudoColors.felt,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Slim top strip: title + calm-motion toggle only.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.home_outlined,
+                            color: Colors.white70),
+                        tooltip: 'Quit to home',
+                        onPressed: () => Navigator.popUntil(
+                            context, (r) => r.isFirst),
+                      ),
+                      const Expanded(
+                        child: Text('Indian Ludo',
+                            style: TextStyle(
+                                color: Colors.white70, fontSize: 14),
+                            textAlign: TextAlign.center),
+                      ),
+                      const Text('Calm',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.white70)),
+                      Switch(
+                        value: c.reducedMotion,
+                        onChanged: c.setReducedMotion,
+                      ),
+                    ],
+                  ),
                 ),
-              ]),
-            ],
-          ),
-          body: Column(
-            children: [
-              // Turn banner.
-              Container(
-                width: double.infinity,
-                color: turnColor.withValues(alpha: 0.2),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  'Player ${state.turnPlayer + 1}\'s turn'
-                  '${c.isBot(state.turnPlayer) ? ' (bot)' : ''}'
-                  '${cfg.isDiagonalPairMode ? ' • diagonal-pair' : ''}',
-                  key: const ValueKey('turnBanner'),
-                  style: Theme.of(context).textTheme.titleLarge,
-                  textAlign: TextAlign.center,
+                // Turn banner: full house color, white bold — unmissable.
+                Container(
+                  width: double.infinity,
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: turnColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: const [
+                      BoxShadow(
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                          color: Colors.black45)
+                    ],
+                  ),
+                  child: Text(
+                    'Player ${state.turnPlayer + 1}\'s turn'
+                    '${c.isBot(state.turnPlayer) ? ' (bot)' : ''}'
+                    '${cfg.isDiagonalPairMode ? ' • diagonal-pair' : ''}',
+                    key: const ValueKey('turnBanner'),
+                    style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final size = Size(
-                        constraints.maxWidth, constraints.maxHeight);
-                    return GestureDetector(
-                      key: const ValueKey('gameBoard'),
-                      onTapUp: (d) => _onTapBoard(d.localPosition, size),
-                      child: AnimatedBuilder(
-                        animation: _pulse,
-                        builder: (_, _) => CustomPaint(
-                          size: size,
-                          painter: BoardPainter(
-                            state: state,
-                            highlightKeys: highlight,
-                            pulse: c.reducedMotion ? 0 : _pulse.value,
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final size = Size(
+                          constraints.maxWidth, constraints.maxHeight);
+                      return GestureDetector(
+                        key: const ValueKey('gameBoard'),
+                        onTapUp: (d) => _onTapBoard(d.localPosition, size),
+                        child: AnimatedBuilder(
+                          animation: _pulse,
+                          builder: (_, _) => CustomPaint(
+                            size: size,
+                            painter: BoardPainter(
+                              state: state,
+                              highlightKeys: highlight,
+                              pulse: c.reducedMotion ? 0 : _pulse.value,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-              PoolStrip(history: state.poolHistory),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  DiceWidget(
-                    sides: cfg.sides,
-                    value: c.roll,
-                    rolling: c.rolling,
-                    reducedMotion: c.reducedMotion,
+                PoolStrip(history: state.poolHistory),
+                const SizedBox(height: 8),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      DiceWidget(
+                        sides: cfg.sides,
+                        value: c.roll,
+                        rolling: c.rolling,
+                        reducedMotion: c.reducedMotion,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: FilledButton(
+                          key: const ValueKey('gameRoll'),
+                          onPressed: canRoll ? c.rollDice : null,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: canRoll
+                                ? LudoColors.gold
+                                : Colors.grey,
+                            foregroundColor: LudoColors.ink,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 18),
+                            textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          child: Text(c.roll == null
+                              ? '🎲 ROLL (d${cfg.sides})'
+                              : 'ROLLED ${c.roll}'),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  FilledButton(
-                    key: const ValueKey('gameRoll'),
-                    onPressed: (c.roll == null &&
-                            !c.rolling &&
-                            state.phase == Phase.playing &&
-                            !c.isBot(state.turnPlayer))
-                        ? c.rollDice
-                        : null,
-                    child: const Text('Roll (N-sided)'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                c.roll == null
-                    ? 'Tap Roll, then tap a highlighted token'
-                    : 'Rolled ${c.roll} — tap a highlighted token',
-                key: const ValueKey('rollHint'),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-            ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  c.roll == null
+                      ? 'Tap ROLL, then tap a glowing token'
+                      : 'Rolled ${c.roll} — tap a glowing token',
+                  key: const ValueKey('rollHint'),
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         );
       },

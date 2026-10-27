@@ -78,43 +78,80 @@ class BoardPainter extends CustomPainter {
     final cfg = state.config;
     final layout = BoardLayout(size, cfg);
     final safe = safeCells(cfg, state.houses);
+    final c = layout.center;
+    final rimR = layout.radius + 24;
 
-    // Board disc.
+    // Drop shadow under the physical board.
     canvas.drawCircle(
-      layout.center,
-      layout.radius + 24,
-      Paint()..color = LudoColors.track,
+      c + const Offset(0, 6),
+      rimR,
+      Paint()..color = Colors.black.withValues(alpha: 0.35),
     );
 
-    // Ring cells.
+    // Wooden rim: dark outer edge, wood band, inner bevel.
+    canvas.drawCircle(c, rimR, Paint()..color = LudoColors.woodDark);
+    canvas.drawCircle(
+        c, rimR - 5, Paint()..color = LudoColors.wood);
+    // Wood grain: faint concentric arcs (deterministic, golden-safe).
+    final grain = Paint()
+      ..color = LudoColors.woodDark.withValues(alpha: 0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    for (var i = 0; i < 3; i++) {
+      final rr = rimR - 9 - i * 5;
+      canvas.drawArc(Rect.fromCircle(center: c, radius: rr),
+          math.pi * (0.15 + 0.5 * i), math.pi * 1.2, false, grain);
+    }
+    canvas.drawCircle(
+        c,
+        rimR - 22,
+        Paint()
+          ..color = LudoColors.woodDark
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2);
+
+    // Ivory board face.
+    canvas.drawCircle(c, rimR - 24, Paint()..color = LudoColors.ivory);
+
+    // Ring cells: inset ivory wells with wood-tone borders.
     for (var cell = 0; cell < cfg.ringCells; cell++) {
       final p = layout.ringCell(cell);
       final isSafe = safe.contains(cell);
       canvas.drawCircle(
+        p + const Offset(0, 1),
+        layout.cellRadius,
+        Paint()..color = Colors.black.withValues(alpha: 0.12),
+      );
+      canvas.drawCircle(
         p,
         layout.cellRadius,
         Paint()
-          ..color = isSafe ? LudoColors.safeStar.withValues(alpha: 0.45) : LudoColors.cream
+          ..color = isSafe
+              ? LudoColors.gold.withValues(alpha: 0.55)
+              : LudoColors.cellInset
           ..style = PaintingStyle.fill,
       );
       canvas.drawCircle(
         p,
         layout.cellRadius,
         Paint()
-          ..color = Colors.brown.shade200
+          ..color =
+              isSafe ? LudoColors.woodDark : LudoColors.cellEdge
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1,
+          ..strokeWidth = isSafe ? 2 : 1,
       );
       if (isSafe) {
         final tp = TextPainter(
-          text: const TextSpan(text: '★', style: TextStyle(fontSize: 10)),
+          text: const TextSpan(
+              text: '★',
+              style: TextStyle(fontSize: 11, color: LudoColors.woodDark)),
           textDirection: TextDirection.ltr,
         )..layout();
         tp.paint(canvas, p - Offset(tp.width / 2, tp.height / 2));
       }
     }
 
-    // Home columns: spoke from each house start toward center.
+    // Home columns: house-color wells deepening toward the center.
     for (final house in state.houses) {
       final color = LudoColors.house(house.corner);
       for (var k = 0; k < cfg.homeSteps; k++) {
@@ -123,16 +160,49 @@ class BoardPainter extends CustomPainter {
           p,
           layout.cellRadius * 0.8,
           Paint()
-            ..color = color.withValues(alpha: 0.25 + 0.1 * k)
+            ..color = color.withValues(alpha: 0.3 + 0.12 * k)
             ..style = PaintingStyle.fill,
         );
+        canvas.drawCircle(
+          p,
+          layout.cellRadius * 0.8,
+          Paint()
+            ..color = LudoColors.houseDark(house.corner)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1,
+        );
       }
-      // Corner badge (diagonal-pair cue in 2p-10side mode).
+      // Yard pocket: recessed house-color disc (diagonal-pair cue).
       final yard = layout.yardSlot(house, 0);
-      canvas.drawCircle(yard, 22, Paint()..color = color.withValues(alpha: 0.18));
+      canvas.drawCircle(
+          yard + const Offset(0, 1.5),
+          24,
+          Paint()..color = Colors.black.withValues(alpha: 0.15));
+      canvas.drawCircle(
+          yard, 24, Paint()..color = color.withValues(alpha: 0.28));
+      canvas.drawCircle(
+        yard,
+        24,
+        Paint()
+          ..color = LudoColors.houseDark(house.corner)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
     }
 
-    // Tokens: flat discs with white ring; active pulse on legal moves.
+    // Center medallion.
+    canvas.drawCircle(
+        c, 20, Paint()..color = LudoColors.gold.withValues(alpha: 0.5));
+    canvas.drawCircle(
+      c,
+      20,
+      Paint()
+        ..color = LudoColors.woodDark
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+
+    // Tokens: glossy wooden pawns (shadow + body + top highlight + ring).
     var finishedIndex = 0;
     for (final token in state.tokens) {
       final house = state.houses.firstWhere((h) => h.id == token.houseId);
@@ -141,25 +211,47 @@ class BoardPainter extends CustomPainter {
       final p = layout.tokenPos(cfg, house, token,
           token.isFinished(cfg) ? finishedIndex++ : 0);
       final color = LudoColors.house(house.corner);
+      final dark = LudoColors.houseDark(house.corner);
       final r = layout.cellRadius + 3;
       if (isHighlight) {
+        // Unmissable legal-move halo: gold outer + pulsing white inner.
         canvas.drawCircle(
           p,
-          r + 4 + 3 * pulse,
+          r + 6 + 3 * pulse,
           Paint()
-            ..color = color.withValues(alpha: 0.5)
+            ..color = LudoColors.gold
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 3,
+            ..strokeWidth = 3.5,
+        );
+        canvas.drawCircle(
+          p,
+          r + 2.5,
+          Paint()
+            ..color = Colors.white.withValues(alpha: 0.85)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5,
         );
       }
-      canvas.drawCircle(p, r, Paint()..color = color);
+      canvas.drawCircle(
+        p + Offset(0, r * 0.35),
+        r,
+        Paint()..color = Colors.black.withValues(alpha: 0.3),
+      );
+      canvas.drawCircle(p, r, Paint()..color = dark);
+      canvas.drawCircle(p, r - 1.5, Paint()..color = color);
+      // Glossy top-light.
+      canvas.drawCircle(
+        p + Offset(-r * 0.3, -r * 0.35),
+        r * 0.38,
+        Paint()..color = Colors.white.withValues(alpha: 0.55),
+      );
       canvas.drawCircle(
         p,
         r,
         Paint()
-          ..color = Colors.white
+          ..color = Colors.white.withValues(alpha: 0.9)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2,
+          ..strokeWidth = 1.5,
       );
     }
   }

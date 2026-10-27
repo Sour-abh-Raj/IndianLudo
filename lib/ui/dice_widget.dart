@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'theme.dart';
+
 /// N-sided die with a pop/shake animation. Static when [reducedMotion].
 class DiceWidget extends StatefulWidget {
   final int sides;
@@ -49,18 +51,32 @@ class _DiceWidgetState extends State<DiceWidget>
   @override
   Widget build(BuildContext context) {
     final face = widget.value?.toString() ?? '–';
+    final rolled = widget.value != null;
     final box = Container(
-      width: 64,
-      height: 64,
+      width: 72,
+      height: 72,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.brown.shade300, width: 2),
-        boxShadow: const [BoxShadow(blurRadius: 4, offset: Offset(0, 2))],
+        // Ivory die with a wood-tone edge; gold rim once rolled.
+        color: LudoColors.diceFace,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: rolled ? LudoColors.gold : LudoColors.woodDark,
+            width: rolled ? 3 : 2),
+        boxShadow: [
+          const BoxShadow(
+              blurRadius: 6, offset: Offset(0, 3), color: Colors.black45),
+          if (rolled)
+            BoxShadow(
+                blurRadius: 12,
+                color: LudoColors.gold.withValues(alpha: 0.6)),
+        ],
       ),
       child: Text(face,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+          style: const TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
+              color: LudoColors.dicePip)),
     );
     if (widget.reducedMotion || !widget.rolling) return box;
     return AnimatedBuilder(
@@ -90,18 +106,25 @@ class PoolStrip extends StatelessWidget {
         ? history.sublist(history.length - 5)
         : history;
     if (last.isEmpty) {
-      return const Text('No rolls yet', style: TextStyle(fontSize: 12));
+      return const Text('No rolls yet',
+          style: TextStyle(fontSize: 12, color: Colors.white70));
     }
     return Wrap(
       spacing: 6,
       children: [
         for (var i = 0; i < last.length; i++)
           Chip(
-            label: Text('${last[i]}'),
+            label: Text('${last[i]}',
+                style: TextStyle(
+                    fontWeight: i == last.length - 1
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    color: LudoColors.ink)),
             visualDensity: VisualDensity.compact,
             backgroundColor: i == last.length - 1
-                ? Theme.of(context).colorScheme.primaryContainer
-                : null,
+                ? LudoColors.gold
+                : LudoColors.ivory,
+            side: const BorderSide(color: LudoColors.woodDark),
           ),
       ],
     );
