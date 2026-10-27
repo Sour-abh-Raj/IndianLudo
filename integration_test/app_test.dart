@@ -31,10 +31,11 @@ import 'package:integration_test/integration_test.dart';
 import 'package:indian_ludo/game/geometry.dart';
 import 'package:indian_ludo/game/rules.dart';
 import 'package:indian_ludo/game/types.dart';
+import 'package:indian_ludo/state/game_controller.dart';
 import 'package:indian_ludo/main.dart';
 import 'package:indian_ludo/ui/board_painter.dart';
 
-const _tapRollHint = 'Tap Roll, then tap a highlighted token';
+const _tapRollHint = 'Tap ROLL, then tap a glowing token';
 
 /// Shadow driver: mirrors the live GameController via the pure engine so
 /// the test can aim taps at highlighted tokens and assert turn sync.
@@ -286,15 +287,34 @@ Future<Move> _doMove(_LiveGame g, int roll,
     }
   }
   final chosen = pick.first;
+  // The app is authoritative: crowded tap targets may resolve to a legal
+  // move other than the shadow's pick. Snapshot real progress, then mirror
+  // whichever move the app actually played (prevents silent shadow drift
+  // that later surfaces as a flaky tap-miss).
+  final routeEl = tester.element(find.byKey(const ValueKey('gameBoard')));
+  final real =
+      ModalRoute.of(routeEl)!.settings.arguments as GameController;
+  final before = {
+    for (final t in real.state.tokens) '${t.houseId}:${t.slot}': t.progress
+  };
   await tester.tapAt(box.localToGlobal(pos[chosen]!));
   await _pump(tester);
   expect(_hint(tester), _tapRollHint, reason: 'tap missed its token');
-  applyMove(g.shadow, chosen, roll);
-  g.played.add(chosen);
+  final changed = real.state.tokens
+      .where((t) => t.progress != before['${t.houseId}:${t.slot}'])
+      .toList();
+  // Captures move extra tokens (victims go home to -1); the mover is the
+  // one that did not go home.
+  final moved = changed.where((t) => t.progress != -1).toList();
+  expect(moved.length, 1, reason: 'tap must move exactly one token');
+  final actual = legal.firstWhere((m) =>
+      m.houseId == moved.single.houseId && m.slot == moved.single.slot);
+  applyMove(g.shadow, actual, roll);
+  g.played.add(actual);
   g.housesUsed
-      .putIfAbsent(chosen.player, () => <int>{})
-      .add(chosen.houseId);
-  if (chosen.isCapture) {
+      .putIfAbsent(actual.player, () => <int>{})
+      .add(actual.houseId);
+  if (actual.isCapture) {
     g.captureSeen = true;
     expect(find.textContaining('Capture!'), findsOneWidget);
   }
@@ -446,8 +466,12 @@ void main() {
       if (_chips(tester).length > humanRolls) proven = true;
     }
     expect(proven, isTrue, reason: 'no bot roll in 3 fresh games');
-    // Restart: back to setup, start again, board is fresh.
-    await tester.tap(find.byType(BackButton));
+    // Restart: quit to home via the top-strip home button, then start a
+    // fresh game through setup; board is fresh.
+    await tester.tap(find.byTooltip('Quit to home'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('homePlayLocal')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('homePlayLocal')));
     await tester.pumpAndSettle();
     expect(find.text('Game Setup'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('setupStart')));

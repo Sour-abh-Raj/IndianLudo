@@ -11,3 +11,5 @@
 - [2026-10-27] UI-FINAL: 8 final PNGs promoted to test_results/ (mockups verified: felt/wood/gold, no 480px overflow).
 - [2026-10-27] UI-DONE: full suite 190/190 + analyze clean; debug APK rebuilt once incrementally.
 - [2026-10-27] SYNC: pushed d8b60a1 'Indian Ludo v1.1: verified + realistic board UI' (35 files) to origin/main; ls-remote matches.
+
+FIX 2026-10-28: integration 9/9 on -d windows (hint-string update, capture-aware shadow reconcile, quit-to-home restart flow).
